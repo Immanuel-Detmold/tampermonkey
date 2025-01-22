@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CT Daten kopieren
 // @namespace    http://tampermonkey.net/
-// @version      2025-01-21
+// @version      V1
 // @description  Fügt einen Button "Song Daten kopieren" ein, der:
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -12,6 +12,7 @@
 
 (function () {
   "use strict";
+  console.log("CT Daten kopieren Script wurde geladen!");
 
   const baseUrl = "https://immanuel-detmold.church.tools";
 

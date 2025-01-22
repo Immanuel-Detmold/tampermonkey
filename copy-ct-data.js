@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CT Daten kopieren
 // @namespace    http://tampermonkey.net/
-// @version      V1.2
+// @version      V1.21
 // @description  Fügt einen Button "Song Daten kopieren" ein, der:
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -274,30 +274,26 @@
       }
   }
 
-  // --- Button Injection ---
-  function addButtonToForm() {
-      const interval = setInterval(() => {
-          const form = document.querySelector("#cdb_group form"); // Adjust selector if needed.
-          if (form) {
-              clearInterval(interval);
+  const TARGET_URL = "https://immanuel-detmold.church.tools/?q=churchservice#AgendaView/";
+  const BUTTON_ID = "song-data-copy-button";
 
-              const button = document.createElement("button");
-              button.id = "song-data-copy-button";
-              button.className = "btn btn-default bg-cyan-500 text-white";
-              button.type = "button";
-              button.innerHTML =
-                  '<i class="fas fa-copy fa-fw" aria-hidden="true"></i> Song Daten kopieren';
-              button.style.marginLeft = "10px";
+  const addButton = () => {
+      if (window.location.href !== TARGET_URL || document.getElementById(BUTTON_ID)) return;
+      const form = document.querySelector("#cdb_group form");
+      if (form) {
+          const btn = document.createElement("button");
+          btn.id = BUTTON_ID;
+          btn.className = "btn btn-default bg-cyan-500 text-white";
+          btn.type = "button";
+          btn.innerHTML = '<i class="fas fa-copy fa-fw" aria-hidden="true"></i> Song Daten kopieren';
+          btn.style.marginLeft = "10px";
+          btn.onclick = function () {
+                runExtraction();
+            };
+          form.appendChild(btn);
+      }
+  };
 
-              button.onclick = function () {
-                  runExtraction();
-              };
-
-              form.appendChild(button);
-          }
-      }, 500);
-  }
-
-  // Inject the button when the page has fully loaded.
-  window.addEventListener("load", addButtonToForm);
+  ['load', 'popstate', 'hashchange'].forEach(event => window.addEventListener(event, addButton));
+  new MutationObserver(addButton).observe(document.body, { childList: true, subtree: true });
 })();

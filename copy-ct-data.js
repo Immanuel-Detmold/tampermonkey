@@ -4,7 +4,7 @@
 // @version      2025-01-21
 // @description  Fügt einen Button "Song Daten kopieren" ein, der:
 // @author       You
-// @match        *://*/*
+// @match        https://immanuel-detmold.church.tools/?q=churchservice
 // @downloadURL  https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/copy-ct-data.js
 // @updateURL    https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/copy-ct-data.js
 // @grant        GM.setClipboard

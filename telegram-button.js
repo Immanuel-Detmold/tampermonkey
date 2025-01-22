@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Telegram Button Injector
 // @namespace    http://tampermonkey.net/
-// @version      2025-01-21
+// @version      V1.2
 // @description  Adds a button to open Telegram Web within the specified form
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice

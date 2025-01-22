@@ -8,8 +8,8 @@
 // @match        https://www.multitracks.com/*
 // @include      https://www.multitracks.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=multitracks.com
-// @downloadURL  https://github.com/Immanuel-Detmold/tampermonkey/blob/main/create-multitracks-playlist
-// @updateURL    https://github.com/Immanuel-Detmold/tampermonkey/blob/main/create-multitracks-playlist
+// @downloadURL  https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/create-multitracks-playlist.js
+// @updateURL    https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/create-multitracks-playlist.js
 // @grant        GM_openInTab
 // @grant        GM_setClipboard
 // ==/UserScript==

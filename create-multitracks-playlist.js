@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.0
+// @version      V1.2
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -25,6 +25,7 @@
   ) {
     return new Promise((resolve) => {
       const interval = setInterval(() => {
+        console.log("Searching: ", selector);
         const element = context.querySelector(selector);
         if (element) {
           clearInterval(interval);
@@ -101,22 +102,25 @@
   async function handleAddSong(song, index) {
     if (!song.multitracks) {
       song.multitracks = song.pad;
+      song.type = "pad";
     }
     console.log("SONG: ", song);
 
     // For first song do it differently
     if (index == 0) {
+      console.log("Index is 0");
       // CLick on Add Song
       const addSongButton = await waitForElementAsync(
         "div.setlists-details--add-message div a"
       ); // Adjusted selector
       addSongButton.click();
+    } else {
+      // Click on Add Item
+      const addItem = await waitForElementAsync("span.add-item");
+      addItem.click();
     }
 
-    // Click on Add Item
-    document.querySelector("span.add-item").click();
-
-    // Step 1: Click on the "Library" tab
+    // Step 1: Click on the Library or Ambient Pad tab
     await clickTabBasedOnType(song.type);
 
     // Step 2: Click into the search input
@@ -186,9 +190,11 @@
 
     // Determine the correct tab based on the type
     if (type === "song") {
-      tab = document.querySelector("li[data-container='library'] a.tab-filter");
+      tab = await waitForElementAsync(
+        "li[data-container='library'] a.tab-filter"
+      );
     } else if (type === "pad") {
-      tab = document.querySelector("li[data-container='pads'] a.tab-filter");
+      tab = await waitForElementAsync("li[data-container='pads'] a.tab-filter");
     }
 
     // Click the tab if found

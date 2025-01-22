@@ -7,6 +7,8 @@
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=church.tools
 // @grant        GM_openInTab
+// @downloadURL  https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/telegram-button.js
+// @updateURL    https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/telegram-button.js
 // ==/UserScript==
 
 (function () {

@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      V1.23
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
-// @author       You
+// @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
 // @match        https://www.multitracks.com/*
 // @include      https://www.multitracks.com/*
@@ -153,7 +153,7 @@
     // Step 3: Wait for and click the song link
     await clickSongSpanByText(song.multitracks);
 
-    await new Promise((resolve) => setTimeout(resolve, 200)); // Wait
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait
 
     // Step 4: Select the key
     //if(song.type == "song") {

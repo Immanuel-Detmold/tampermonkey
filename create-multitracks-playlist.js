@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.23
+// @version      V1.3
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -14,10 +14,21 @@
 // @grant        GM_setClipboard
 // ==/UserScript==
 
-(async function () {
+(function () {
   "use strict";
 
-  // Utility function: Wait until an element matching the given selector appears.
+  /** ---------------------------------------------------------------------
+   *                     1) HELPER & UTILITY FUNCTIONS
+   * ----------------------------------------------------------------------
+   */
+
+  /**
+   * Utility function: Wait until an element matching the given selector appears in the DOM.
+   * @param {string} selector - The CSS selector of the target element.
+   * @param {Node} [context=document] - The DOM node to search within. Defaults to the entire document.
+   * @param {number} [intervalTime=500] - Time in milliseconds between each check.
+   * @returns {Promise<Element>} - A promise that resolves with the found element.
+   */
   async function waitForElementAsync(
     selector,
     context = document,
@@ -25,7 +36,7 @@
   ) {
     return new Promise((resolve) => {
       const interval = setInterval(() => {
-        console.log("Searching: ", selector);
+        // console.log(`Searching for element: ${selector}`);
         const element = context.querySelector(selector);
         if (element) {
           clearInterval(interval);
@@ -35,238 +46,15 @@
     });
   }
 
-  // Creates the setlist using the provided JSON data.
-  async function handleSetlists(jsonData) {
-    const setlistName = `${jsonData.date} - ${jsonData.time}`;
-
-    const newSetlistButton = await waitForElementAsync(
-      "#newSetlistSection a.btn"
-    );
-    newSetlistButton.click();
-
-    const iframe = await waitForElementAsync("iframe.js-frame-add-setlist");
-    if (!iframe) {
-      console.error("Iframe not found");
-      return;
-    }
-
-    const iframeDocument =
-      iframe.contentDocument || iframe.contentWindow.document;
-    if (!iframeDocument) {
-      console.error("Unable to access iframe document");
-      return;
-    }
-
-    const setlistNameInput = await waitForElementAsync(
-      "input[placeholder='Enter Setlist Name']",
-      iframeDocument
-    );
-    if (setlistNameInput) {
-      console.log("Setlist name input found");
-      setlistNameInput.focus();
-      setlistNameInput.value = setlistName;
-    } else {
-      console.error("Setlist name input not found");
-      return;
-    }
-
-    // Change the Date
-    iframeDocument.querySelector("#datepickerValue").value = jsonData.date;
-
-    const createSetlistButton = await waitForElementAsync(
-      "a#lnkSave",
-      iframeDocument
-    );
-    if (createSetlistButton) {
-      createSetlistButton.click();
-    } else {
-      console.error("Create Setlist button not found");
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 1 second
-
-    await handleSongs(jsonData.songs);
-  }
-
-  // Adds songs from the JSON data.
-  async function handleSongs(songs) {
-    for (const [index, song] of songs.entries()) {
-      await handleAddSong(song, index);
-    }
-
-    await saveSetlist();
-  }
-
-  // Add a song from JSON data
-  async function handleAddSong(song, index) {
-    if (!song.multitracks) {
-      song.multitracks = song.pad;
-      song.type = "pad";
-    }
-    console.log("SONG: ", song);
-
-    // For first song do it differently
-    if (index == 0) {
-      console.log("Index is 0");
-      // CLick on Add Song
-      const addSongButton = await waitForElementAsync(
-        "div.setlists-details--add-message div a"
-      ); // Adjusted selector
-      addSongButton.click();
-    } else {
-      // Click on Add Item
-      const addItem = await waitForElementAsync("span.add-item");
-      addItem.click();
-    }
-
-    // Step 1: Click on the Library or Ambient Pad tab
-    await clickTabBasedOnType(song.type);
-
-    // Step 2: Click into the search input
-    const searchInput = await waitForElementAsync(
-      "input.setlists-details--song-search--input.js-add-item-song-search-input"
-    );
-    if (searchInput) {
-      searchInput.focus();
-      searchInput.value = ""; // Clear existing text
-
-      // Type the multitracks name character by character
-      for (const char of song.multitracks) {
-        searchInput.value += char;
-        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-        await new Promise((resolve) => setTimeout(resolve, 5)); // Simulate typing delay
-      }
-      searchInput.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
-      searchInput.dispatchEvent(
-        new KeyboardEvent("keyup", { key: "Enter", bubbles: true })
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait
-    } else {
-      console.error("Search input not found.");
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait
-    // Step 3: Wait for and click the song link
-    await clickSongSpanByText(song.multitracks);
-
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait
-
-    // Step 4: Select the key
-    //if(song.type == "song") {
-    await selectKey(song.key);
-
-    // Setp 5: If Pad also select tempo
-    if (song.type == "pad") {
-      await handleSongTempo(song);
-    }
-    //}
-    //else {
-    //alert("Clicking: " + song.key.toUpperCase())
-    //  document.querySelector(`#${song.key.toUpperCase()}`).click()
-    //}
-
-    // Step 5: Add the song to the setlist
-    const selector =
-      song.type === "song"
-        ? "a.js-add-song-save"
-        : song.type === "pad"
-        ? ".js-add-pad-save"
-        : null;
-    if (!selector) return console.error("Unknown type: ", song.type);
-
-    const addButton = await waitForElementAsync(selector);
-    addButton
-      ? addButton.click()
-      : console.error(`Add button for ${song.type} not found.`);
-    await new Promise((resolve) => setTimeout(resolve, 200)); // Wait
-  }
-
-  async function clickTabBasedOnType(type) {
-    let tab;
-
-    // Determine the correct tab based on the type
-    if (type === "song") {
-      tab = await waitForElementAsync(
-        "li[data-container='library'] a.tab-filter"
-      );
-    } else if (type === "pad") {
-      tab = await waitForElementAsync("li[data-container='pads'] a.tab-filter");
-    }
-
-    // Click the tab if found
-    if (tab) {
-      tab.click();
-    } else {
-      console.error(`${type} tab not found.`);
-    }
-  }
-
-  async function selectKey(key) {
-    if (!key) {
-      console.warn("No key provided. Skipping key selection.");
-      return;
-    }
-
-    // Deselect accidentals if pressed
-    const sharpRadio = document.querySelector("#radio9");
-    const flatRadio = document.querySelector("#radio10");
-
-    if (sharpRadio && sharpRadio.checked) sharpRadio.click();
-    if (flatRadio && flatRadio.checked) flatRadio.click();
-
-    // Select the base key
-    const keyButton = document.querySelector(`#${key[0].toUpperCase()}`);
-    if (keyButton) {
-      keyButton.click();
-    } else {
-      console.warn(
-        `Key button not found for base key: "${key[0].toUpperCase()}"`
-      );
-      return;
-    }
-
-    // Handle accidentals
-    const accidental = key.length > 1 ? key[1] : null;
-
-    if (accidental === "#" && sharpRadio) {
-      sharpRadio.click();
-    } else if (accidental === "b" && flatRadio) {
-      flatRadio.click();
-    } else if (accidental) {
-      console.error(`Invalid accidental: "${accidental}"`);
-    }
-  }
-
-  async function handleSongTempo(song) {
-    if (song.tempo && song.tempo !== "") {
-      // Click the switch
-      const switchElement = document.querySelector(
-        "div:nth-child(4) > .onoff-switch > .onoff-switch--label > .onoff-switch--inner"
-      );
-      if (switchElement) {
-        switchElement.click();
-      } else {
-        console.error("Switch element not found.");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 500ms before re-checking
-      // Set the tempo
-      const bpmInput = document.querySelector("#bpmPad");
-      if (bpmInput) {
-        bpmInput.value = parseInt(song.tempo);
-        bpmInput.dispatchEvent(new Event("change", { bubbles: true }));
-      } else {
-        console.error("BPM input element not found.");
-      }
-    }
-  }
-
-  async function clickSongSpanByText(targetText) {
+  /**
+   * Clicks on a <span> with class "u-ellipsis" that exactly matches the given text.
+   * Useful for selecting the correct song from search results.
+   * @param {string} targetText - The text to match in the span.
+   * @param {number} [timeoutMs=10000] - Timeout in milliseconds to keep searching.
+   */
+  async function clickSongSpanByText(targetText, timeoutMs = 10000) {
     console.log("Searching for the target span...");
-    const timeout = Date.now() + 10000; // 10 seconds timeout
+    const timeout = Date.now() + timeoutMs; // e.g. 10 seconds
 
     while (Date.now() < timeout) {
       // Find all spans with the class "u-ellipsis"
@@ -284,8 +72,8 @@
         }
       }
 
-      console.log(`Still searching for span with text: "${targetText}"`);
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 500ms before re-checking
+      // Wait 500ms before checking again
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     console.error(
@@ -293,64 +81,436 @@
     );
   }
 
-  // Saves the setlist to the cloud.
-  async function saveSetlist() {
-    const saveToCloudButton = await waitForElementAsync(".js-save-setlist");
-    saveToCloudButton.click();
+  /** ---------------------------------------------------------------------
+   *            2) MULTITRACKS SETLIST CREATION & SONG INSERTION
+   * ----------------------------------------------------------------------
+   */
+
+  /**
+   * Creates a new setlist using the provided JSON data (clipboard).
+   * @param {Object} jsonData - Parsed JSON data with structure { date, time, songs }
+   */
+  async function handleSetlists(jsonData) {
+    const setlistName = `${jsonData.date} - ${jsonData.time}`;
+    console.log("Creating setlist with name:", setlistName);
+
+    // 1) Click the "New Setlist" button (exists in #newSetlistSection)
+    const newSetlistButton = await waitForElementAsync(
+      "#newSetlistSection a.btn"
+    );
+    newSetlistButton.click();
+
+    // 2) Wait for the "Add Setlist" iframe to appear
+    const iframe = await waitForElementAsync("iframe.js-frame-add-setlist");
+    if (!iframe) {
+      console.error("Iframe not found for adding new setlist.");
+      return;
+    }
+
+    const iframeDocument =
+      iframe.contentDocument || iframe.contentWindow.document;
+    if (!iframeDocument) {
+      console.error("Unable to access 'Add Setlist' iframe document.");
+      return;
+    }
+
+    // 3) Fill in the setlist name
+    const setlistNameInput = await waitForElementAsync(
+      "input[placeholder='Enter Setlist Name']",
+      iframeDocument
+    );
+    if (!setlistNameInput) {
+      console.error("Setlist name input not found inside iframe.");
+      return;
+    }
+    setlistNameInput.focus();
+    setlistNameInput.value = setlistName;
+
+    // 4) Set the setlist date
+    const datepicker = iframeDocument.querySelector("#datepickerValue");
+    if (datepicker) {
+      datepicker.value = jsonData.date;
+    }
+
+    // 5) Click the "Create Setlist" button
+    const createSetlistButton = await waitForElementAsync(
+      "a#lnkSave",
+      iframeDocument
+    );
+    if (!createSetlistButton) {
+      console.error("Create Setlist button not found in iframe.");
+      return;
+    }
+    createSetlistButton.click();
+
+    // 6) Wait a moment, then add songs
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await handleSongs(jsonData.songs);
   }
 
-  // Page Routing Logic
-  async function routePage() {
-    const clipboardData = await navigator.clipboard.readText();
-    if (
-      window.location.href.includes(
-        "https://www.multitracks.com/premium/setlists/?setlistSelection="
-      ) ||
-      window.location.href === "https://www.multitracks.com/premium/setlists/"
-    ) {
-      try {
-        if (clipboardData) {
-          const confirmed = confirm("Set automatisch erstellen?");
-          if (confirmed) {
-            const jsonData = JSON.parse(clipboardData);
-            await handleSetlists(jsonData);
-          }
-        } else {
-          alert("Keine Daten in der Zwischenablage gefunden.");
-        }
-      } catch (error) {
-        alert(
-          "Fehler beim Lesen der Zwischenablage oder JSON-Daten: " +
-            error.message
-        );
-        console.error("Clipboard or JSON error:", error);
-      }
-    } else if (
-      window.location.href.includes(
-        "https://www.multitracks.com/premium/setlists/details.aspx?setlistID"
-      )
-    ) {
-      if (clipboardData) {
-        try {
-          const jsonData = JSON.parse(clipboardData);
-          const confirmed = confirm("Songs automatisch einfügen?");
-          if (confirmed) {
-            await handleSongs(jsonData.songs);
-          }
-        } catch (error) {
-          console.error("Error parsing JSON data:", error);
-        }
-      } else {
-        console.error("No data entered in prompt.");
-      }
+  /**
+   * Iterates over each song in the JSON data and adds them to the setlist.
+   * @param {Array} songs - Array of song objects: [{ multitracks, key, tempo, type }, ...]
+   */
+  async function handleSongs(songs) {
+    for (const [index, song] of songs.entries()) {
+      await handleAddSong(song, index);
+    }
+
+    // Finally, save the setlist to the cloud
+    await saveSetlist();
+  }
+
+  /**
+   * Handles the process of adding a single song/pad to the current setlist.
+   * @param {Object} song - The song object containing { multitracks, key, tempo, type, pad }.
+   * @param {number} index - The song's index in the array.
+   */
+  async function handleAddSong(song, index) {
+    // If the song property doesn't exist, use the "pad" property instead.
+    if (!song.multitracks) {
+      song.multitracks = song.pad;
+      song.type = "pad";
+    }
+    console.log("Adding song/pad:", song);
+
+    // 1) For the first song, click "Add Song". For subsequent songs, click "Add Item".
+    if (index === 0) {
+      const addSongButton = await waitForElementAsync(
+        "div.setlists-details--add-message div a"
+      );
+      addSongButton.click();
+    } else {
+      const addItemButton = await waitForElementAsync("span.add-item");
+      addItemButton.click();
+    }
+
+    // 2) Click the correct tab: library (song) or pads (ambient pad)
+    await clickTabBasedOnType(song.type);
+
+    // 3) Type into the search input
+    const searchInput = await waitForElementAsync(
+      "input.setlists-details--song-search--input.js-add-item-song-search-input"
+    );
+    if (!searchInput) {
+      console.error("Search input not found for adding a song/pad.");
+      return;
+    }
+
+    // Clear existing text
+    searchInput.focus();
+    searchInput.value = "";
+
+    // Type the multitracks name character by character
+    for (const char of song.multitracks) {
+      searchInput.value += char;
+      searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 5)); // Simulate typing delay
+    }
+
+    // Dispatch enter to trigger search
+    searchInput.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
+    searchInput.dispatchEvent(
+      new KeyboardEvent("keyup", { key: "Enter", bubbles: true })
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 4) Wait for and click the matching song link
+    await clickSongSpanByText(song.multitracks);
+
+    // 5) Select the key
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait briefly
+    await selectKey(song.key);
+
+    // 6) If it's a pad, optionally set the tempo
+    if (song.type === "pad") {
+      await handleSongTempo(song);
+    }
+
+    // 7) Click the "Add" button for the song or pad
+    let selector = null;
+    if (song.type === "song") selector = "a.js-add-song-save";
+    else if (song.type === "pad") selector = ".js-add-pad-save";
+
+    if (!selector) {
+      console.error("Unknown song type:", song.type);
+      return;
+    }
+
+    const addButton = await waitForElementAsync(selector);
+    if (addButton) addButton.click();
+    else console.error(`Add button for ${song.type} not found.`);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  /**
+   * Clicks on either the "Library" or "Pads" tab, depending on the provided type.
+   * @param {string} type - "song" or "pad"
+   */
+  async function clickTabBasedOnType(type) {
+    let tabSelector = null;
+    if (type === "song") {
+      tabSelector = "li[data-container='library'] a.tab-filter";
+    } else if (type === "pad") {
+      tabSelector = "li[data-container='pads'] a.tab-filter";
+    }
+
+    if (tabSelector) {
+      const tab = await waitForElementAsync(tabSelector);
+      if (tab) tab.click();
+      else console.error(`${type} tab not found.`);
     }
   }
 
+  /**
+   * Selects the given key on the Multitracks key selector.
+   * @param {string} key - e.g. "C", "Gb", "D#"
+   */
+  async function selectKey(key) {
+    if (!key) {
+      console.warn("No key provided. Skipping key selection.");
+      return;
+    }
+
+    // Deselect accidentals if pressed
+    const sharpRadio = document.querySelector("#radio9");
+    const flatRadio = document.querySelector("#radio10");
+
+    if (sharpRadio && sharpRadio.checked) sharpRadio.click();
+    if (flatRadio && flatRadio.checked) flatRadio.click();
+
+    // Select the base key (e.g. "C")
+    const baseKey = key[0].toUpperCase(); // e.g. "C"
+    const keyButton = document.querySelector(`#${baseKey}`);
+    if (!keyButton) {
+      console.warn(`Key button not found for base key: "${baseKey}"`);
+      return;
+    }
+    keyButton.click();
+
+    // Handle accidentals (e.g. "b", "#")
+    const accidental = key.length > 1 ? key[1] : null;
+    if (accidental === "#" && sharpRadio) {
+      sharpRadio.click();
+    } else if (accidental === "b" && flatRadio) {
+      flatRadio.click();
+    } else if (accidental) {
+      console.error(`Invalid accidental: "${accidental}"`);
+    }
+  }
+
+  /**
+   * If a pad has a tempo value, enable the tempo switch and set the BPM.
+   * @param {Object} song - The song/pad data, potentially containing a "tempo" property.
+   */
+  async function handleSongTempo(song) {
+    if (!song.tempo || song.tempo === "") return;
+
+    // Click the switch for tempo
+    const switchElement = document.querySelector(
+      "div:nth-child(4) > .onoff-switch > .onoff-switch--label > .onoff-switch--inner"
+    );
+    if (switchElement) {
+      switchElement.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } else {
+      console.error("Switch element for tempo not found.");
+      return;
+    }
+
+    // Set the BPM
+    const bpmInput = document.querySelector("#bpmPad");
+    if (bpmInput) {
+      bpmInput.value = parseInt(song.tempo, 10);
+      bpmInput.dispatchEvent(new Event("change", { bubbles: true }));
+    } else {
+      console.error("BPM input element not found for pad tempo.");
+    }
+  }
+
+  /**
+   * Saves the current setlist to the cloud by clicking the "Save to Cloud" button.
+   */
+  async function saveSetlist() {
+    const saveToCloudButton = await waitForElementAsync(".js-save-setlist");
+    if (saveToCloudButton) {
+      saveToCloudButton.click();
+      console.log("Setlist saved to cloud.");
+    } else {
+      console.error("Could not find the 'Save to Cloud' button.");
+    }
+  }
+
+  /** ---------------------------------------------------------------------
+   *         3) BUTTONS & UI FOR AUTOMATIC SETLIST / SONG ADDITION
+   * ----------------------------------------------------------------------
+   */
+
+  /**
+   * Inserts the "Set automatisch erstellen" button (in #newSetlistSection),
+   * and triggers `handleSetlists` from clipboard data when clicked.
+   */
+  const insertCreateSetlistButton = () => {
+    const section = document.getElementById("newSetlistSection");
+    if (!section) return false; // No section found
+
+    // Prevent duplicate insertion
+    if (section.querySelector('[data-modal-target="automatisch"]')) {
+      return true; // Already added
+    }
+
+    // Create the button element
+    const btn = document.createElement("a");
+    btn.className = "btn";
+    btn.setAttribute("data-modal-target", "automatisch");
+    btn.textContent = "Set automatisch erstellen";
+
+    // Basic styling
+    btn.style.backgroundColor = "orange";
+    btn.style.border = "none";
+
+    // Hover effects
+    btn.addEventListener("mouseenter", () => {
+      btn.style.backgroundColor = "darkorange";
+      btn.style.color = "white";
+    });
+    btn.addEventListener("mouseleave", () => {
+      btn.style.backgroundColor = "orange";
+      btn.style.color = "";
+    });
+
+    // On click: read JSON from clipboard and call handleSetlists
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      console.log('"Set automatisch erstellen" button clicked.');
+
+      try {
+        const clipboardData = await navigator.clipboard.readText();
+        if (!clipboardData) {
+          alert("Keine JSON-Daten in der Zwischenablage!");
+          return;
+        }
+        const jsonData = JSON.parse(clipboardData);
+        await handleSetlists(jsonData);
+      } catch (err) {
+        alert("Fehler beim Lesen der Zwischenablage oder Parsing JSON: " + err);
+        console.error("Clipboard/JSON error:", err);
+      }
+    });
+
+    // Append to the #newSetlistSection
+    section.appendChild(btn);
+    console.log('"Set automatisch erstellen" button added.');
+    return true;
+  };
+
+  /**
+   * Inserts the "Song automatisch einfügen" button into the .premium--content--header div
+   * and triggers `handleSongs` from clipboard data when clicked.
+   */
+  const insertAddSongsButton = () => {
+    const headerDiv = document.querySelector(".premium--content--header");
+    if (!headerDiv) return false;
+
+    // Check if the button is already there
+    if (headerDiv.querySelector('[data-button="song-automatisch-einfuegen"]')) {
+      return true; // Already added
+    }
+
+    // Create container if not existing
+    let buttonContainer = headerDiv.querySelector(".custom-button-container");
+    if (!buttonContainer) {
+      buttonContainer = document.createElement("div");
+      buttonContainer.className = "custom-button-container";
+      buttonContainer.style.display = "flex";
+      buttonContainer.style.gap = "10px";
+      buttonContainer.style.marginLeft = "auto";
+
+      // Insert the container before the #saveSection (if available)
+      const saveSection = document.getElementById("saveSection");
+      if (saveSection) {
+        headerDiv.insertBefore(buttonContainer, saveSection);
+      } else {
+        headerDiv.appendChild(buttonContainer);
+      }
+      console.log("Button container created and aligned to the right.");
+    }
+
+    // Move the existing "Edit Setlist" button (if found) into the container
+    const editSetlistBtn = document.getElementById("editSetlistBtn");
+    if (editSetlistBtn && !buttonContainer.contains(editSetlistBtn)) {
+      buttonContainer.appendChild(editSetlistBtn);
+      console.log('"Edit Setlist" button moved to the button container.');
+    }
+
+    // Create "Song automatisch einfügen" button
+    const newButton = document.createElement("a");
+    newButton.className = "btn";
+    newButton.textContent = "Songs automatisch einfügen";
+    newButton.href = "#";
+    newButton.setAttribute("data-button", "song-automatisch-einfuegen");
+
+    // Basic styling
+    newButton.style.backgroundColor = "orange";
+    newButton.style.border = "none";
+    newButton.style.display = "inline-flex";
+    newButton.style.alignItems = "center";
+    newButton.style.justifyContent = "center";
+    newButton.style.padding = "8px 12px";
+    newButton.style.lineHeight = "1.2";
+
+    // Hover effects
+    newButton.addEventListener("mouseenter", () => {
+      newButton.style.backgroundColor = "darkorange";
+    });
+    newButton.addEventListener("mouseleave", () => {
+      newButton.style.backgroundColor = "orange";
+    });
+
+    // On click: read JSON from clipboard and call handleSongs
+    newButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      console.log('"Song automatisch einfügen" button clicked.');
+
+      try {
+        const clipboardData = await navigator.clipboard.readText();
+        if (!clipboardData) {
+          alert("Keine JSON-Daten in der Zwischenablage!");
+          return;
+        }
+        const jsonData = JSON.parse(clipboardData);
+        if (!jsonData.songs || !Array.isArray(jsonData.songs)) {
+          alert("JSON-Daten enthalten keine gültige 'songs'-Eigenschaft!");
+          return;
+        }
+        await handleSongs(jsonData.songs);
+      } catch (err) {
+        alert("Fehler beim Lesen der Zwischenablage oder Parsing JSON: " + err);
+        console.error("Clipboard/JSON error:", err);
+      }
+    });
+
+    // Append the button to the container
+    buttonContainer.appendChild(newButton);
+    console.log('"Song automatisch einfügen" button added successfully.');
+    return true;
+  };
+
+  /** ---------------------------------------------------------------------
+   *         4) CHURCHTOOLS: ADD "MULTITRACKS PLAYLIST" BUTTON
+   * ----------------------------------------------------------------------
+   */
   const TARGET_URL =
     "https://immanuel-detmold.church.tools/?q=churchservice#AgendaView/";
   const BUTTON_ID = "multitracks-playlist-button";
 
-  // Inject "Multitracks Playlist" button on ChurchTools page.
+  /**
+   * Injects a "Multitracks Playlist" button on the ChurchTools page to open
+   * the Multitracks setlists in a new tab.
+   */
   const addPlaylistButton = () => {
     if (
       window.location.href !== TARGET_URL ||
@@ -366,29 +526,76 @@
       btn.innerHTML =
         '<i class="fas fa-music fa-fw" aria-hidden="true"></i> Multitracks Playlist';
       btn.style.marginLeft = "10px";
+
+      // Clicking it opens the Multitracks page in a new tab
       btn.onclick = () => {
         GM_openInTab("https://www.multitracks.com/premium/setlists/", {
           active: true,
         });
       };
+
       form.appendChild(btn);
-      console.log('"Multitracks Playlist" button added.');
+      console.log('"Multitracks Playlist" button added to ChurchTools page.');
     }
   };
 
-  // List of events to listen for URL changes
+  /** ---------------------------------------------------------------------
+   *         5) SCRIPT INITIALIZATION & EVENT HOOKS
+   * ----------------------------------------------------------------------
+   */
+
+  /**
+   * Inserts the necessary buttons on Multitracks pages depending on the URL.
+   * Observes DOM changes if elements are dynamically loaded.
+   */
+  const routePage = async () => {
+    const currentUrl = window.location.href;
+
+    // If on setlists page but not details.aspx -> Insert "Set automatisch erstellen"
+    const isSetlistsPage =
+      currentUrl.includes("https://www.multitracks.com/premium/setlists/") &&
+      !currentUrl.includes(
+        "https://www.multitracks.com/premium/setlists/details.aspx"
+      );
+    if (isSetlistsPage) {
+      if (!insertCreateSetlistButton()) {
+        // If button not added, observe the DOM
+        const observer = new MutationObserver(() => {
+          if (insertCreateSetlistButton()) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+
+    // If on details.aspx -> Insert "Song automatisch einfügen"
+    const isDetailsPage = currentUrl.includes(
+      "https://www.multitracks.com/premium/setlists/details.aspx"
+    );
+    if (isDetailsPage) {
+      if (!insertAddSongsButton()) {
+        // If button not added, observe the DOM
+        const observer = new MutationObserver(() => {
+          if (insertAddSongsButton()) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+  };
+
+  // 1) Add the "Multitracks Playlist" button on ChurchTools page
   ["load", "popstate", "hashchange"].forEach((event) =>
     window.addEventListener(event, addPlaylistButton)
   );
-
-  // Observe DOM changes to handle dynamic content
   new MutationObserver(addPlaylistButton).observe(document.body, {
     childList: true,
     subtree: true,
   });
+  addPlaylistButton(); // initial attempt
 
-  // Initial attempt in case the script runs after the DOM is ready
-  addPlaylistButton();
-
-  window.addEventListener("load", routePage);
+  // 2) Insert the relevant Multitracks buttons once the document is fully loaded
+  document.addEventListener("readystatechange", () => {
+    if (document.readyState === "complete") {
+      routePage();
+    }
+  });
 })();

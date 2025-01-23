@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Telegram Button Injector
 // @namespace    http://tampermonkey.net/
-// @version      V1.31
+// @version      V1.4.1
 // @description  Adds a button to open Telegram Web within the specified form
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -14,7 +14,8 @@
 (function () {
   "use strict";
 
-  const TARGET_URL = "https://immanuel-detmold.church.tools/?q=churchservice#AgendaView/";
+  const TARGET_URL =
+    "https://immanuel-detmold.church.tools/?q=churchservice#AgendaView/";
   const BUTTON_ID = "telegram-open-button";
 
   // Function to add the button
@@ -31,7 +32,9 @@
         '<i class="fas fa-paper-plane fa-fw" aria-hidden="true"></i> Öffne Telegram';
       button.style.marginLeft = "10px";
       button.onclick = () => {
-        GM_openInTab("https://web.telegram.org/a/#-1001944158000", { active: true });
+        GM_openInTab("https://web.telegram.org/a/#-1001944158000", {
+          active: true,
+        });
       };
       form.appendChild(button);
       console.log("Telegram button added.");

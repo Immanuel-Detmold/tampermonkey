@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CT Daten kopieren
 // @namespace    http://tampermonkey.net/
-// @version      V1.21
+// @version      V1.2.1
 // @description  Fügt einen Button "Song Daten kopieren" ein, der:
 // @author       You
 // @match        https://immanuel-detmold.church.tools/?q=churchservice

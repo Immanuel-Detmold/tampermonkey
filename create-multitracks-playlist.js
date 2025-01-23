@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.3
+// @version      V1.3.1
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice

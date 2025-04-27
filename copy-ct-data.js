@@ -287,7 +287,8 @@
     if (form) {
       const btn = document.createElement("button");
       btn.id = BUTTON_ID;
-      btn.className = "btn btn-default bg-cyan-500 text-white";
+      btn.className = "btn btn-default text-white";
+      btn.style.backgroundColor = "#0891b2";
       btn.type = "button";
       btn.innerHTML =
         '<i class="fas fa-copy fa-fw" aria-hidden="true"></i> Song Daten kopieren';

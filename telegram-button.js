@@ -26,7 +26,8 @@
     if (form) {
       const button = document.createElement("button");
       button.id = BUTTON_ID;
-      button.className = "btn btn-default bg-cyan-500 text-white";
+      button.className = "btn btn-default text-white";
+      button.style.backgroundColor = "#0891b2";
       button.type = "button";
       button.innerHTML =
         '<i class="fas fa-paper-plane fa-fw" aria-hidden="true"></i> Öffne Telegram';

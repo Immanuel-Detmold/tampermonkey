@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      V1.2.1
 // @description  Fügt einen Button "Song Daten kopieren" ein, der:
-// @author       You
+// @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
 // @downloadURL  https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/copy-ct-data.js
 // @updateURL    https://raw.githubusercontent.com/Immanuel-Detmold/tampermonkey/main/copy-ct-data.js

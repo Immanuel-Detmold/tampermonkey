@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      V1.4.1
 // @description  Adds a button to open Telegram Web within the specified form
-// @author       You
+// @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=church.tools
 // @grant        GM_openInTab

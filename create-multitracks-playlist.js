@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.3.3
+// @version      V1.3.4
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -222,6 +222,13 @@
 
     // 5) Select the key
     await new Promise((resolve) => setTimeout(resolve, 500)); // Wait briefly
+
+    // First, select the arrangement
+    await selectArrangement();
+    
+    // Wait a moment for the arrangement selection to process
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     await selectKey(song.key);
 
     // 6) If it's a pad, optionally set the tempo
@@ -266,6 +273,40 @@
   }
 
   /**
+   * Selects the arrangement (preferring "Immanuel" if available, otherwise "Default").
+   * @returns {Promise<void>}
+   */
+  async function selectArrangement() {
+    // Wait for the arrangement dropdown to appear
+    const arrangementDropdown = await waitForElementAsync(
+      "select.js-add-song-arrangement"
+    );
+    
+    if (!arrangementDropdown) {
+      console.warn("Arrangement dropdown not found. Skipping arrangement selection.");
+      return;
+    }
+
+    // Find the "Immanuel" option
+    const immanuelOption = Array.from(arrangementDropdown.options).find(
+      (option) => option.textContent.trim().toLowerCase() === "immanuel"
+    );
+
+    if (immanuelOption) {
+      // Select "Immanuel" if it exists
+      arrangementDropdown.value = immanuelOption.value;
+      console.log("Selected arrangement: Immanuel");
+    } else {
+      // Otherwise, select "Default" (value "0")
+      arrangementDropdown.value = "0";
+      console.log("Selected arrangement: Default");
+    }
+
+    // Trigger change event to ensure the selection is registered
+    arrangementDropdown.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  /**
    * Selects the given key on the Multitracks key selector.
    * @param {string} key - e.g. "C", "Gb", "D#"
    */
@@ -274,6 +315,8 @@
       console.warn("No key provided. Skipping key selection.");
       return;
     }
+
+    
 
     // Deselect accidentals if pressed
     const sharpRadio = document.querySelector("#radio9");

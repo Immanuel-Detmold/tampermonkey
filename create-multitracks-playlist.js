@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.3.2
+// @version      V1.3.3
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -96,7 +96,7 @@
 
     // 1) Click the "New Setlist" button (exists in #newSetlistSection)
     const newSetlistButton = await waitForElementAsync(
-      "#newSetlistSection a.btn"
+      "#newSetlistSection2 a.btn"
     );
     newSetlistButton.click();
 
@@ -354,7 +354,8 @@
    * and triggers `handleSetlists` from clipboard data when clicked.
    */
   const insertCreateSetlistButton = () => {
-    const section = document.getElementById("newSetlistSection");
+
+    const section = document.getElementById("newSetlistSection2");
     if (!section) return false; // No section found
 
     // Prevent duplicate insertion
@@ -404,7 +405,7 @@
       }
     });
 
-    // Append to the #newSetlistSection
+    // Append to the #newSetlistSection2
     section.appendChild(btn);
     console.log('"Set automatisch erstellen" button added.');
     return true;

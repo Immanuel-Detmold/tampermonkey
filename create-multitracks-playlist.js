@@ -452,7 +452,7 @@
       const immanuelBtn = document.createElement("button");
       immanuelBtn.textContent = "Immanuel";
       immanuelBtn.className = "btn";
-      immanuelBtn.style.backgroundColor = "#4CAF50";
+      immanuelBtn.style.backgroundColor = "orange";
       immanuelBtn.style.color = "white";
       immanuelBtn.style.border = "none";
       immanuelBtn.style.padding = "10px 20px";
@@ -460,10 +460,10 @@
       immanuelBtn.style.cursor = "pointer";
       immanuelBtn.style.fontSize = "16px";
       immanuelBtn.addEventListener("mouseenter", () => {
-        immanuelBtn.style.backgroundColor = "#45a049";
+        immanuelBtn.style.backgroundColor = "darkorange";
       });
       immanuelBtn.addEventListener("mouseleave", () => {
-        immanuelBtn.style.backgroundColor = "#4CAF50";
+        immanuelBtn.style.backgroundColor = "orange";
       });
       immanuelBtn.onclick = () => {
         document.body.removeChild(overlay);
@@ -474,7 +474,7 @@
       const jugendBtn = document.createElement("button");
       jugendBtn.textContent = "Jugend";
       jugendBtn.className = "btn";
-      jugendBtn.style.backgroundColor = "#2196F3";
+      jugendBtn.style.backgroundColor = "orange";
       jugendBtn.style.color = "white";
       jugendBtn.style.border = "none";
       jugendBtn.style.padding = "10px 20px";
@@ -482,10 +482,10 @@
       jugendBtn.style.cursor = "pointer";
       jugendBtn.style.fontSize = "16px";
       jugendBtn.addEventListener("mouseenter", () => {
-        jugendBtn.style.backgroundColor = "#0b7dda";
+        jugendBtn.style.backgroundColor = "darkorange";
       });
       jugendBtn.addEventListener("mouseleave", () => {
-        jugendBtn.style.backgroundColor = "#2196F3";
+        jugendBtn.style.backgroundColor = "orange";
       });
       jugendBtn.onclick = () => {
         document.body.removeChild(overlay);
@@ -496,7 +496,7 @@
       const defaultBtn = document.createElement("button");
       defaultBtn.textContent = "Default";
       defaultBtn.className = "btn";
-      defaultBtn.style.backgroundColor = "#9E9E9E";
+      defaultBtn.style.backgroundColor = "orange";
       defaultBtn.style.color = "white";
       defaultBtn.style.border = "none";
       defaultBtn.style.padding = "10px 20px";
@@ -504,10 +504,10 @@
       defaultBtn.style.cursor = "pointer";
       defaultBtn.style.fontSize = "16px";
       defaultBtn.addEventListener("mouseenter", () => {
-        defaultBtn.style.backgroundColor = "#757575";
+        defaultBtn.style.backgroundColor = "darkorange";
       });
       defaultBtn.addEventListener("mouseleave", () => {
-        defaultBtn.style.backgroundColor = "#9E9E9E";
+        defaultBtn.style.backgroundColor = "orange";
       });
       defaultBtn.onclick = () => {
         document.body.removeChild(overlay);

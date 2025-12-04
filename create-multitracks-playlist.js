@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Create Multitracks Playlist
 // @namespace    http://tampermonkey.net/
-// @version      V1.3.4
+// @version      V1.3.5
 // @description  Reads JSON data from clipboard and creates a Multitracks setlist.
 // @author       Ronny S
 // @match        https://immanuel-detmold.church.tools/?q=churchservice
@@ -16,6 +16,9 @@
 
 (function () {
   "use strict";
+
+  // Global variable to store the selected arrangement
+  let selectedArrangement = null;
 
   /** ---------------------------------------------------------------------
    *                     1) HELPER & UTILITY FUNCTIONS
@@ -273,7 +276,7 @@
   }
 
   /**
-   * Selects the arrangement (preferring "Immanuel" if available, otherwise "Default").
+   * Selects the arrangement based on the global selectedArrangement or falls back to "Immanuel"/"Default".
    * @returns {Promise<void>}
    */
   async function selectArrangement() {
@@ -287,19 +290,31 @@
       return;
     }
 
-    // Find the "Immanuel" option
-    const immanuelOption = Array.from(arrangementDropdown.options).find(
-      (option) => option.textContent.trim().toLowerCase() === "immanuel"
-    );
+    let selectedOption = null;
 
-    if (immanuelOption) {
-      // Select "Immanuel" if it exists
-      arrangementDropdown.value = immanuelOption.value;
-      console.log("Selected arrangement: Immanuel");
+    // If user selected an arrangement from the dialog, use that
+    if (selectedArrangement) {
+      selectedOption = Array.from(arrangementDropdown.options).find(
+        (option) => option.textContent.trim().toLowerCase() === selectedArrangement.toLowerCase()
+      );
+      
+      // If the selected arrangement is not found, always fall back to Default
+      if (!selectedOption) {
+        console.warn(`Arrangement "${selectedArrangement}" not found, falling back to Default`);
+        selectedOption = Array.from(arrangementDropdown.options).find(
+          (option) => option.textContent.trim().toLowerCase() === "default"
+        );
+      }
+    }
+
+    if (selectedOption) {
+      // Select the found option
+      arrangementDropdown.value = selectedOption.value;
+      console.log("Selected arrangement:", selectedOption.textContent.trim());
     } else {
-      // Otherwise, select "Default" (value "0")
+      // Otherwise, select "Default" by value "0"
       arrangementDropdown.value = "0";
-      console.log("Selected arrangement: Default");
+      console.log("Selected arrangement: Default (by value)");
     }
 
     // Trigger change event to ensure the selection is registered
@@ -391,6 +406,131 @@
    *         3) BUTTONS & UI FOR AUTOMATIC SETLIST / SONG ADDITION
    * ----------------------------------------------------------------------
    */
+
+  /**
+   * Shows a dialog to select arrangement (Immanuel or Jugend)
+   * @returns {Promise<string|null>} - The selected arrangement name or null if cancelled
+   */
+  async function showArrangementDialog() {
+    return new Promise((resolve) => {
+      // Create overlay
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.zIndex = "10000";
+
+      // Create dialog
+      const dialog = document.createElement("div");
+      dialog.style.backgroundColor = "white";
+      dialog.style.padding = "30px";
+      dialog.style.borderRadius = "8px";
+      dialog.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
+      dialog.style.textAlign = "center";
+      dialog.style.minWidth = "300px";
+
+      // Title
+      const title = document.createElement("h2");
+      title.textContent = "Wähle Arrangement";
+      title.style.marginBottom = "20px";
+      title.style.color = "#333";
+      dialog.appendChild(title);
+
+      // Button container
+      const buttonContainer = document.createElement("div");
+      buttonContainer.style.display = "flex";
+      buttonContainer.style.gap = "15px";
+      buttonContainer.style.justifyContent = "center";
+
+      // Immanuel button
+      const immanuelBtn = document.createElement("button");
+      immanuelBtn.textContent = "Immanuel";
+      immanuelBtn.className = "btn";
+      immanuelBtn.style.backgroundColor = "#4CAF50";
+      immanuelBtn.style.color = "white";
+      immanuelBtn.style.border = "none";
+      immanuelBtn.style.padding = "10px 20px";
+      immanuelBtn.style.borderRadius = "4px";
+      immanuelBtn.style.cursor = "pointer";
+      immanuelBtn.style.fontSize = "16px";
+      immanuelBtn.addEventListener("mouseenter", () => {
+        immanuelBtn.style.backgroundColor = "#45a049";
+      });
+      immanuelBtn.addEventListener("mouseleave", () => {
+        immanuelBtn.style.backgroundColor = "#4CAF50";
+      });
+      immanuelBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve("Immanuel");
+      };
+
+      // Jugend button
+      const jugendBtn = document.createElement("button");
+      jugendBtn.textContent = "Jugend";
+      jugendBtn.className = "btn";
+      jugendBtn.style.backgroundColor = "#2196F3";
+      jugendBtn.style.color = "white";
+      jugendBtn.style.border = "none";
+      jugendBtn.style.padding = "10px 20px";
+      jugendBtn.style.borderRadius = "4px";
+      jugendBtn.style.cursor = "pointer";
+      jugendBtn.style.fontSize = "16px";
+      jugendBtn.addEventListener("mouseenter", () => {
+        jugendBtn.style.backgroundColor = "#0b7dda";
+      });
+      jugendBtn.addEventListener("mouseleave", () => {
+        jugendBtn.style.backgroundColor = "#2196F3";
+      });
+      jugendBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve("Jugend");
+      };
+
+      // Default button
+      const defaultBtn = document.createElement("button");
+      defaultBtn.textContent = "Default";
+      defaultBtn.className = "btn";
+      defaultBtn.style.backgroundColor = "#9E9E9E";
+      defaultBtn.style.color = "white";
+      defaultBtn.style.border = "none";
+      defaultBtn.style.padding = "10px 20px";
+      defaultBtn.style.borderRadius = "4px";
+      defaultBtn.style.cursor = "pointer";
+      defaultBtn.style.fontSize = "16px";
+      defaultBtn.addEventListener("mouseenter", () => {
+        defaultBtn.style.backgroundColor = "#757575";
+      });
+      defaultBtn.addEventListener("mouseleave", () => {
+        defaultBtn.style.backgroundColor = "#9E9E9E";
+      });
+      defaultBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve("Default");
+      };
+
+      buttonContainer.appendChild(immanuelBtn);
+      buttonContainer.appendChild(jugendBtn);
+      buttonContainer.appendChild(defaultBtn);
+      dialog.appendChild(buttonContainer);
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      // Close on overlay click
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+          resolve(null);
+        }
+      });
+    });
+  }
 
   /**
    * Inserts the "Set automatisch erstellen" button (in #newSetlistSection),
@@ -517,10 +657,18 @@
       newButton.style.backgroundColor = "orange";
     });
 
-    // On click: read JSON from clipboard and call handleSongs
+    // On click: show arrangement dialog, then read JSON from clipboard and call handleSongs
     newButton.addEventListener("click", async (e) => {
       e.preventDefault();
       console.log('"Song automatisch einfügen" button clicked.');
+
+      // Show arrangement selection dialog first
+      selectedArrangement = await showArrangementDialog();
+      if (!selectedArrangement) {
+        console.log("Arrangement selection cancelled.");
+        return;
+      }
+      console.log("Selected arrangement:", selectedArrangement);
 
       try {
         const clipboardData = await navigator.clipboard.readText();
@@ -540,6 +688,9 @@
         const data = prompt("Füge die Daten hier manuell ein");
         const jsonData = JSON.parse(data);
         await handleSongs(jsonData.songs);
+      } finally {
+        // Reset selected arrangement after processing
+        selectedArrangement = null;
       }
     });
 

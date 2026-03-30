@@ -10,6 +10,7 @@
 // @grant        GM.setClipboard
 // ==/UserScript==
 
+
 (function () {
   "use strict";
 

@@ -283,7 +283,7 @@
       document.getElementById(BUTTON_ID)
     )
       return;
-    const form = document.querySelector("#cdb_group form");
+    const form = document.querySelector("#cdb_content form");
     if (form) {
       const btn = document.createElement("button");
       btn.id = BUTTON_ID;
